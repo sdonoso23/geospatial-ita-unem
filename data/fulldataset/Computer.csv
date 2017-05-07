@@ -1,0 +1,29 @@
+Codice;Territorio;Variable;2005;2006;2007;2009
+'010;Piemonte;COMP;5,2;7,9;8,1;9,1
+'020;Valle D'Aosta;COMP;6,6;5,9;8,5;10,4
+'030;Lombardia;COMP;4,8;8,4;9,1;9,3
+'070;Liguria;COMP;5,6;6,7;8,3;9,5
+'040;Trentino Alto Adige;COMP;5,5;7,8;9,4;10,7
+'021;Bolzano - Bozen;COMP;4,7;8,4;9;10,9
+'022;Trento;COMP;6,3;7,2;9,7;10,4
+'050;Veneto;COMP;6,4;9,3;8,3;9,3
+'060;Friuli Venezia Giulia;COMP;3,9;5,9;7,8;10,6
+'080;Emilia Romagna;COMP;5,5;8,4;8,4;10,3
+'090;Toscana;COMP;5,5;8,6;10,6;11,2
+'100;Umbria;COMP;6,2;7,9;7,9;11,1
+'110;Marche;COMP;6,1;7,9;7,1;9,2
+'120;Lazio;COMP;5,7;6,8;8;9,4
+'130;Abruzzo;COMP;6,7;7;8,3;9,7
+'140;Molise;COMP;4,4;5,8;8,4;9,6
+'150;Campania;COMP;3,7;5,9;7,3;6,8
+'160;Puglia;COMP;3,6;6,9;7,5;7,4
+'170;Basilicata;COMP;4,1;7,3;8,4;8,6
+'180;Calabria;COMP;4;6,6;8,4;9,1
+'190;Sicilia;COMP;3,3;6,5;8,6;10,3
+'200;Sardegna;COMP;5;7,9;8,5;10,8
+'001;Nord-Ovest;COMP;5;8,1;8,7;9,3
+'002;Nord-Est;COMP;5,7;8,4;8,4;9,9
+'003;Centro;COMP;5,7;7,6;8,7;10
+'004;Sud;COMP;4;6,4;7,7;7,7
+'005;Isole;COMP;3,7;6,8;8,6;10,5
+'006;Italia;COMP;4,9;7,5;8,4;9,3

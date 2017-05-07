@@ -1,0 +1,46 @@
+
+ACCLAV - Numero indice del tasso di incidentalità grave sul lavoro (Anno 1998 = 100)	
+COMP - Persone di 16 - 74 anni con un basso livello di capacità nell'uso del Personal Computer (per 100 persone della stessa classe di età)	
+DEL - Indice di delituossita	
+DELVIOL - Indice di delittuosità - Criminalità violenta	
+DENS - Densità	
+EXP - Exportazioni (Miglaia di Euro)	
+EXPMONFAM - Spesa media mensile familiare (euro correnti)	
+FAM4 - Famiglie di oltre 4 componenti per 100 famiglie	
+IMP - Importazioni  (valori in migliaia di euro)	
+INCAVG - Reddito medio individuale netto da lavoro	
+INCFAM - Reddito medio familiare netto	
+INCMEDFAM - Reddito mediano familiare netto (esclusi i fitti imputati)	
+IND - Num Imprese	
+INDCOS - Costo del lavoro delle unità locali regionalizzate - Industria (migliaia di euro)	
+INDFAT - Fatturato delle unità locali regionalizzate - Industria (migliaia di euro)	
+INDINV - Investimenti fissi delle unità locali regionalizzate - Industria (migliaia di euro)	
+INDVAG - Valore aggiunto delle unità locali regionalizzate - Industria (migliaia di euro)	
+INTERNET - Persone di 16 - 74 anni con un basso livello di capacità nell'uso di Internet (per 100 persone della stessa classe di età)	
+INVPIL - Investimenti fissi lordi in percentuale del Pil	
+IVG - Tasso di interruzione volontaria di gravidanza (IVG)	
+LAU25 - Laureati per 100 persone di 25 anni	
+MAL - Persone affette da almeno una malattia cronica per 100 abitanti	
+NETIMP-EXP - Saldo import-export  (valori in migliaia di euro)
+NUZ - Tasso di Nuzialita	
+OCC - Tasso di Occupazione	
+OMI - Omicidi volontari consumati  per 100.000 abitanti	
+OSP - Istituti di cura: Tasso di ospedalizzazione	
+PERSOGLAV - Permesso di Soggiorno per Lavoro per 100	
+PILCAP - Prodotto interno lordo pro capite a prezzi concatenati (anno di riferimento 2000; valori in euro)
+POP - Populazione	
+POV -  	Incidenza di povertà relativa tra gli individui (valori percentuali)
+SCH - Tasso di passaggio dalla scuola superiore	
+SCH2564 - Persone in età 25-64 anni che hanno raggiunto al massimo la licenza media per 100 persone della stessa età	
+SEP - Tasso di separazione coniugale	
+SPEINSTPIL - Spesa pubblica per l'istruzione in percentuale del Pil	
+STRMORT - Tasso di morti in incedenti stradali	
+STUDCLASS - Scuole secondarie di secondo grado: studenti per classe	
+UNEM - Tasso di Dessocupazione Totale	
+UNEMFAM - Persone in età 18-59 anni che vivono in famiglie senza alcun componente occupato per 100 persone della stessa età - Totale	
+UNEMLT - Tasso di Dessocupazione Larga Durata	
+UNI - Tasso di iscrizione all'università
+VOTDEP - Votanti per 100 elettori alla Camera dei deputanti	
+VOTSEN - Votanti per 100 elettori al Senato della Repubblica	
+	
+	

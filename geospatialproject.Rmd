@@ -1,0 +1,430 @@
+---
+title: "Geospatial Information Management Project"
+author: "Marisol Marchegiani, Davide Gerosa, Sebastian Donoso"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r include = FALSE}
+library(rgeos)
+library(rgdal)
+library(ggplot2)
+library(tidyverse)
+library(ggrepel)
+library(maptools)
+library(spdep)
+library(tidyverse)
+library(tseries)
+library(lmtest)
+library(pander)
+library(ggplot2)
+library(ggrepel)
+library(sphet)
+library(knitr)
+library(stargazer)
+library(xtable)
+
+panderOptions("keep.trailing.zeros",TRUE)
+itadata<-read.csv("dataprogetto.csv")
+regiones<-readOGR("./shapefiles/Reg2016_ED50.shp",layer ="Reg2016_ED50", verbose = T, stringsAsFactors = FALSE)
+centroids<-data.frame(long=coordinates(regiones)[,1],lat=coordinates(regiones)[,2])
+
+italia<-readShapePoly("./shapefiles/Reg2016_ED50")
+
+itacoords<-coordinates(italia)
+
+contnb_ita<-knearneigh(itacoords,4)
+knbita<-knn2nb(contnb_ita)
+w_ita<-nb2listw(knbita,style="W")
+
+lmtable<-function(model){
+    modellist=list()
+    modellist[[1]] = model
+    a<-summary(model)
+    others<-data.frame("Observations"=length(a$residuals),"Residual Std. Error"=a$sigma,"$R^2$"=a$r.squared, "Adjusted $R^2$"=a$adj.r.squared,"AIC"=AIC(model),row.names = NULL,check.names=FALSE) 
+    fstatistic<-data.frame("Statistic"=a$fstatistic[1],"df1"=a$fstatistic[2],"df2"=a$fstatistic[3],
+                           "P-Value"=1-pf(a$fstatistic[1],a$fstatistic[2],a$fstatistic[3]),row.names = c("F Statistic"),check.names=FALSE)
+    
+    modellist[[2]] = others
+    modellist[[3]] = fstatistic
+    return(modellist)
+}
+
+
+allmoranteststable<-function(morantests){
+    moranteststable<-data.frame(c(morantests$LMerr$statistic,morantests$LMlag$statistic,morantests$RLMerr$statistic,
+                                  morantests$RLMlag$statistic,morantests$SARMA$statistic),c(morantests$LMerr$parameter,morantests$LMlag$parameter,morantests$RLMerr$parameter,
+                                                                                            morantests$RLMlag$parameter,morantests$SARMA$parameter),c(morantests$LMerr$p.value,morantests$LMlag$p.value,morantests$RLMerr$p.value,
+                                                                                                                                                      morantests$RLMlag$p.value,morantests$SARMA$p.value))
+    
+    colnames(moranteststable)<-c("Statistic","df","P-Value")
+    row.names(moranteststable)<-c("Spatial Error","Spatial Lag","Robust Spatial Error","Robust Spatial Lag","SARAR")    
+    return(moranteststable)    
+}
+
+
+
+
+sararclassictable<-function(model){
+    
+    c<-summary(model)
+    
+    modellist<-list()
+    
+    modellist[[1]]<-c$Coef
+    modellist[[2]]<-data.frame("Estimate"=c(c$rho,c$lambda),"Std.Error"=c(c$rho.se,c$lambda.se),"z value"=c(c$rho/c$rho.se,c$lambda/c$lambda.se),"Pr(>|z|)"=c(2*(1-pnorm(abs(c$rho/c$rho.se))),2*(1-pnorm(abs(c$lambda/c$lambda.se)))),row.names=c("Rho","Lambda"),check.names=FALSE)
+    modellist[[3]]<-data.frame("Observations"=length(c$residuals),"Parameters"=c$parameters,"AIC"=AIC(model),"Residual Variance"=c$s2,row.names=NULL,check.names=FALSE)  
+    modellist[[4]]<-data.frame("Estimate"=as.vector(c$LR1$statistic),"P-Value"=as.vector(c$LR1$p.value),row.names="LR Test",check.names=FALSE)
+    return(modellist)
+}
+
+impactstable<-function(model,wmatrix){
+    a<-impacts(model,listw = wmatrix)
+    impacts.df<-cbind.data.frame(a$direct,a$indirect,a$total)
+    row.names(impacts.df)<-attributes(a)$bnames
+    colnames(impacts.df)<-c("Direct","Indirect","Total")
+    
+    return(impacts.df)
+}
+
+
+lagmodeltable<-function(model){
+    
+    c<-summary(model)
+    
+    modellist<-list()
+    
+    modellist[[1]]<-c$Coef
+    modellist[[2]]<-data.frame("Estimate"=c(c$rho),"Std.Error"=c(c$rho.se),"z value"=c(c$rho/c$rho.se),"Pr(>|z|)"=c(2*(1-pnorm(c$rho/c$rho.se))),row.names=c("Rho"),check.names=FALSE)
+    modellist[[3]]<-data.frame("Observations"=length(c$residuals),"Parameters"=c$parameters,"AIC"=AIC(model),"Residual Variance"=c$s2,row.names=NULL,check.names=FALSE)  
+    modellist[[4]]<-data.frame("Estimate"=as.vector(c$Wald1$statistic),"P-Value"=as.vector(c$Wald1$p.value),row.names="Wald Test",check.names=FALSE)
+    return(modellist)
+}
+
+
+jbbptests<-function(model){
+    a<-jarque.bera.test(model$residuals)
+    b<-bptest(model)
+    modellist<-list()
+    modellist[[1]]<-data.frame("Statistic"=c(a$statistic,b$statistic),"DF"=c(a$parameter,b$parameter),"P-Value"=c(a$p.value,b$p.value),row.names=c("Jarque-Bera Test","Breusch-Pagan Test"),check.names=FALSE)
+    return(modellist)
+    }
+
+lagstslstable<-function(model){
+    
+    c<-summary(model)
+    
+    modellist<-list()
+    
+    modellist[[1]]<-c$Coef
+    modellist[[2]]<-data.frame("Observations"=length(c$residuals),"Parameters"=length(c$coefficients),"Residual Var."=c$sse/(length(c$residuals)-length(c$coefficients)),row.names=NULL,check.names=FALSE)  
+    return(modellist)
+}
+
+sarargstslstable<-function(model){
+    
+    c<-summary(model)
+    
+    modellist<-list()
+    
+    modellist[[1]]<-c$Coef
+    modellist[[2]]<-data.frame("Lambda Estimate"=c$lambda,"Observations"=length(c$residuals),"Parameters"=c$parameters,"Residual Variance"=c$s2,row.names=NULL,check.names=FALSE)  
+    return(modellist)
+}
+
+
+
+
+
+
+```
+
+
+###1.**Definition of Research Problem**
+
+Our study is about the unemployment rate across the 20 regions of Italy in 2004. We decided to analyze this variable based on the fact that there's visible spatial correlation on its distribution across the different regions. Our dataset for this variable is:  
+&nbsp;
+
+
+
+```{r echo=FALSE, asis= FALSE, fig.align='center'}
+pander(itadata[,3:4],big.mark=",")
+```
+
+To check the spatial distribution we can plot a map of Italy with the values of unemployment rate
+
+```{r echo=FALSE, fig.align="center",warning=FALSE}
+italiamap <- fortify(regiones, region = "REGIONE")
+map <- left_join(italiamap, itadata, by=c("id"="Territorio"))
+centroids<- itadata%>%
+    select(Territorio) %>%
+    cbind.data.frame(.,centroids)
+ggplot(map, aes(x = long, y = lat, group = group)) + geom_polygon(aes(fill = UNEM)) + 
+coord_equal(ratio=1) + 
+geom_text_repel(data=centroids,aes(label=Territorio,x=long,y=lat, group=Territorio))+
+theme(legend.position="right",panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(),axis.line=element_blank(),axis.text.x=element_blank(),
+      axis.text.y=element_blank(),axis.ticks=element_blank(),
+      axis.title.x=element_blank(),
+      axis.title.y=element_blank())+scale_fill_gradient("Unemployment Rate",low = "yellow2", high="firebrick3")
+```
+
+
+
+Moran's Plot of Unemployment Rate:
+```{r echo=FALSE, fit.height=0.1, fit.width=1, fig.align="center" }
+
+UNEMLAG<-lag.listw(w_ita,itadata$UNEM)
+itadata<-cbind.data.frame(itadata,UNEMLAG)
+ggplot(data=itadata,mapping=aes(UNEM,UNEMLAG))+geom_point()+
+    geom_smooth(method ="lm",se=T)+geom_text_repel(aes(label=Territorio))
+
+
+```
+
+
+
+From both map and graphic we can see a clear difference between north and south.  
+&nbsp;
+
+
+To explain the unemployment rate we decided to choose three independent variables:
+
++ Net individual income in euros (INCAVG).
++ Exports per capita in thousands of euros (EXPCAP). 
++ Imports per capita in thousands of euros (IMPCAP).
+
+EXPCAP and IMPCAP are calculated by dividing total imports and total exports by the population of each region (POP).
+&nbsp;
+
+
+Considering this, the model to be estimated is:
+&nbsp;
+
+
+$UNEM = \beta_0 + \beta_1INCAVG + \beta_2EXPCAP + \beta_3IMPCAP + \epsilon$
+&nbsp;
+
+
+
+In the table below we can see our complete dataset is:
+
+
+```{r echo=FALSE,results="asis"}
+pander(itadata[,3:10],big.mark=",",split.cells=c(3,1,1,1,1,1,1,1))
+```
+
+###2. **Model Estimation**
+
+The first step is to analyze the OLS model with the variables chosen:
+&nbsp;
+
+
+```{r comment= "",results="asis" }
+model_lm<-lm(UNEM~INCAVG+EXPCAP+IMPCAP,data=itadata)
+
+```
+
+```{r comment="",results="asis",echo=FALSE}
+aux1<-lmtable(model_lm)
+pander(aux1[[1]],caption="OLS Model")
+pander(aux1[[2]],caption="OLS Model Information")
+pander(aux1[[3]],caption="F Test")
+```
+
+From the output we can see that we have INCAVG and EXCAP as significant variables with a 95% level of confidence. On the other hand, IMPCAP is not a significant variable. The F statistic for the model is significant at 99%, this means that at least one parameter  is significantly not equal to 0
+&nbsp;
+
+
+To test the normality of the residuals we do the Jarque-Bera Test.
+To test the homoscedasticity of the residuals we do the Breusch-Pagan Test.  
+&nbsp;
+
+
+```{r comment="",eval=FALSE}
+jarque.bera.test(model_lm$residuals)
+bptest(model_lm)
+```
+
+```{r comment="",echo=FALSE}
+pander(jbbptests(model_lm)[[1]])
+```
+
+
+The normality of residuals is highly not significant and the homoscedasticity is also not significant.
+
+To test spatial correlation we must create first a W matrix. To do this we selected the K-Nearest Neighbors approach with k= 4 in order to manage the presence of the islands and at the same time to not have an excessive average of neighbors per region.
+
+
+```{r warning=FALSE}
+italia<-readShapePoly("./Shapefiles/Reg2016_ED50")
+itacoords<-coordinates(italia)
+contnb_ita<-knearneigh(itacoords,4)
+knbita<-knn2nb(contnb_ita)
+w_ita<-nb2listw(knbita,style="W")
+```
+
+Now we can do the Moran's I Test to check for spatial correlation:
+
+```{r eval=FALSE}
+lm.morantest(model_lm,w_ita)
+```
+
+```{r comment="",echo=FALSE}
+pander(lm.morantest(model_lm,w_ita),caption="Global Moran's I Test")
+pander(lm.morantest(model_lm,w_ita)$estimate)
+```
+
+&nbsp;
+
+Since the Moran's I statistic leads to not reject the absence of autocorrelation we look to corroborate this result checking for spatial correlation using the Lagrange Multiplier Moran's Tests:
+
+```{r comment="", eval=FALSE}
+lm.LMtests(model_lm,w_ita,test="all")
+
+```
+```{r comment="", echo=FALSE}
+aux2<-lm.LMtests(model_lm,w_ita,test="all")
+pander(allmoranteststable(aux2),caption="Lagrange Multiplier Moran's I Test")
+```
+
+&nbsp;
+
+This test gives significant results for Spatial Lag, Spatial Error and SARAR model, this means that we reject the null hypothesis (absence of spatial autocorrelation) in favor of the alternative hypothesis which is the presence of spatial autocorrelation determined by each respective model.
+&nbsp;
+
+
+We start our analysis by using the most general model which is the SARAR model, using first the maximum likelihood estimation and then the generalized spatial two stages least squares estimation to confirm the results.
+
+```{r comment=""}
+model_sarar<-sacsarlm(UNEM~INCAVG+EXPCAP+IMPCAP,data=itadata,listw=w_ita)
+
+```
+
+```{r comment="",echo=FALSE}
+aux3<-sararclassictable(model_sarar)
+pander(aux3[[1]],caption="SARAR Model")
+pander(aux3[[2]],caption="Spatial Parameters")
+pander(aux3[[3]],caption="Other Information")
+pander(aux3[[4]],caption="LR Test")
+```
+
+&nbsp;
+
+Based on the maximum likelihood estimation of the SARAR model: 
+
++ All the paramaters related to the variables are significant with a 95% level of confidence, including IMPCAP which wasn't significant in the OLS model. 
++ Rho (coefficient of Wy) is also significant with a 95% level of confidence. 
++ Lambda (coefficient of Wu) is not significant with a 95% level of confidence. 
+&nbsp;
+
+```{r comment=""}
+model_sarartsls<-gstsls(UNEM~INCAVG+EXPCAP+IMPCAP,data=itadata,listw=w_ita)
+```
+
+```{r comment="",echo=FALSE}
+aux4<-sarargstslstable(model_sarartsls)
+pander(aux4[[1]],caption="SARAR Generalized Spatial Two Stage Least Squares Model")
+pander(aux4[[2]],caption="Other Information")
+```
+
+&nbsp;
+
+
+Based on the generalized spatial two stages least square estimation of the SARAR model: 
+
++ Only the EXPCAP paramater is significant with a 95% level of confidence.
++ Rho (coefficient of Wy) is also significant with a 95% level of confidence. 
+&nbsp;
+
+According to the results above, the ML estimation has a better fit to the model.
+&nbsp;
+
+Based on the SARAR estimation we assume Rho <> 0 and lambda = 0.  Considering this, we pass to  estimate our model using the spatial lag model, first with maximum likelihood estimation and then with two stages least squares estimation.
+
+```{r warning=FALSE, comment=""}
+model_lag<-lagsarlm(UNEM~INCAVG+EXPCAP+IMPCAP,data=itadata,listw=w_ita)
+
+
+```
+
+```{r comment="",echo=FALSE}
+aux5<-lagmodeltable(model_lag)
+pander(aux5[[1]],caption="Spatial Lag ML Model")
+pander(aux5[[2]],caption="Spatial Parameter")
+pander(aux5[[4]],caption="Wald Test for Rho")
+pander(aux5[[3]],caption="Other Information")
+
+```
+
+&nbsp;
+
+Based on the maximum likelihood estimation of the Spatial Lag model: 
+
++ INCAVG and IMPCAP paramaters are not significant with a 95% level of confidence.
++ Rho (coefficient of Wy) is significant with a 95% level of confidence.
+&nbsp;
+
+```{r comment=""}
+model_lmtsls<-stsls(UNEM~INCAVG+EXPCAP+IMPCAP,data=itadata,listw=w_ita)
+
+```
+
+
+```{r comment="", echo=FALSE}
+aux6<-lagstslstable(model_lmtsls)
+pander(aux6[[1]],caption="Spatial Lag Two Stages Least Squares Model")
+pander(aux6[[2]],caption="Other Information")
+```
+&nbsp;
+
+Based on the two stages least squares estimation of the Spatial Lag model:
+
++ No paramater of the variables is significant with a 95% level of confidence. 
++ Rho (coefficient of Wy) is significant with a 95% level of confidence.
+&nbsp;
+
+
+
+###3.**Conclusion**
+
+Considering all the previous estimations we decide to use the Spatial Lag model with a maximum likelihood estimation. For this particular study, we can conclude that the unemployment rate in a region can be explained by the  unemployment rate in its neighbors  (i.e its spatial lag) and the exports per capita in the region.  
+&nbsp;
+
+We estimate the final model:
+
+```{r comment="",}
+model_final<-lagsarlm(UNEM~EXPCAP,data=itadata,listw=w_ita)
+
+```
+
+```{r comment="", echo=FALSE}
+aux6<-lagmodeltable(model_final)
+pander(aux6[[1]],caption="Spatial Lag ML Model")
+pander(aux6[[2]],caption="Spatial Parameter")
+pander(aux6[[4]],caption="Wald Test for Rho")
+pander(aux6[[3]],caption="Other Information")
+LMTEST<-data.frame("Estimate"=model_final$LMtest,"P-Value"=1-pchisq(model_final$LMtest,1),row.names="LM Test",check.names=FALSE)
+pander(LMTEST,caption="LM Test for residual autocorrelation")
+```
+&nbsp;
+
+Under this Spatial Lag model we can see that:
+
++ EXPCAP parameter is highly significant with a 95% level of confidence.
++ Rho (coefficient of Wy) is also highly significant with a 95% level of confidence.
++ The LM Test leads to not reject autocorrelation of the residuals.
+&nbsp;
+
+
+With the chosen model we can calculate the impact of the independent variable on UNEM:
+
+```{r comment="",echo=FALSE,results="asis"}
+pander(impactstable(model_final,w_ita),caption="Impacts for Spatial Lag Model")
+```
+&nbsp;
+
+
++ The increment of a thousand euros in exports per capita produces a total decrease of -1.891 on the unemployment rate (lower than the a-spatial OLS model).
+
+
