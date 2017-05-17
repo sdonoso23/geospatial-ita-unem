@@ -2,8 +2,8 @@
 title: "Geospatial Information Management Project"
 author: "Marisol Marchegiani, Davide Gerosa, Sebastian Donoso"
 output:
-  word_document: default
-  html_document: default
+  html_document:
+    css: styles.css
 ---
 
 ```{r include = FALSE}
@@ -24,119 +24,18 @@ library(sphet)
 library(knitr)
 library(stargazer)
 library(xtable)
+source("r/loaddata.R")
+source("r/laggraphs.R")
+source("r/pandertables.R")
+source("r/maps.R")
 
 panderOptions("keep.trailing.zeros",TRUE)
-itadata<-read.csv("dataprogetto.csv")
-regiones<-readOGR("./shapefiles/Reg2016_ED50.shp",layer ="Reg2016_ED50", verbose = T, stringsAsFactors = FALSE)
-centroids<-data.frame(long=coordinates(regiones)[,1],lat=coordinates(regiones)[,2])
 
-italia<-readShapePoly("./shapefiles/Reg2016_ED50")
-
+italia<-readShapePoly("shapefiles/Reg2016_ED50")
 itacoords<-coordinates(italia)
-
 contnb_ita<-knearneigh(itacoords,4)
 knbita<-knn2nb(contnb_ita)
 w_ita<-nb2listw(knbita,style="W")
-
-lmtable<-function(model){
-    modellist=list()
-    modellist[[1]] = model
-    a<-summary(model)
-    others<-data.frame("Observations"=length(a$residuals),"Residual Std. Error"=a$sigma,"$R^2$"=a$r.squared, "Adjusted $R^2$"=a$adj.r.squared,"AIC"=AIC(model),row.names = NULL,check.names=FALSE) 
-    fstatistic<-data.frame("Statistic"=a$fstatistic[1],"df1"=a$fstatistic[2],"df2"=a$fstatistic[3],
-                           "P-Value"=1-pf(a$fstatistic[1],a$fstatistic[2],a$fstatistic[3]),row.names = c("F Statistic"),check.names=FALSE)
-    
-    modellist[[2]] = others
-    modellist[[3]] = fstatistic
-    return(modellist)
-}
-
-
-allmoranteststable<-function(morantests){
-    moranteststable<-data.frame(c(morantests$LMerr$statistic,morantests$LMlag$statistic,morantests$RLMerr$statistic,
-                                  morantests$RLMlag$statistic,morantests$SARMA$statistic),c(morantests$LMerr$parameter,morantests$LMlag$parameter,morantests$RLMerr$parameter,
-                                                                                            morantests$RLMlag$parameter,morantests$SARMA$parameter),c(morantests$LMerr$p.value,morantests$LMlag$p.value,morantests$RLMerr$p.value,
-                                                                                                                                                      morantests$RLMlag$p.value,morantests$SARMA$p.value))
-    
-    colnames(moranteststable)<-c("Statistic","df","P-Value")
-    row.names(moranteststable)<-c("Spatial Error","Spatial Lag","Robust Spatial Error","Robust Spatial Lag","SARAR")    
-    return(moranteststable)    
-}
-
-
-
-
-sararclassictable<-function(model){
-    
-    c<-summary(model)
-    
-    modellist<-list()
-    
-    modellist[[1]]<-c$Coef
-    modellist[[2]]<-data.frame("Estimate"=c(c$rho,c$lambda),"Std.Error"=c(c$rho.se,c$lambda.se),"z value"=c(c$rho/c$rho.se,c$lambda/c$lambda.se),"Pr(>|z|)"=c(2*(1-pnorm(abs(c$rho/c$rho.se))),2*(1-pnorm(abs(c$lambda/c$lambda.se)))),row.names=c("Rho","Lambda"),check.names=FALSE)
-    modellist[[3]]<-data.frame("Observations"=length(c$residuals),"Parameters"=c$parameters,"AIC"=AIC(model),"Residual Variance"=c$s2,row.names=NULL,check.names=FALSE)  
-    modellist[[4]]<-data.frame("Estimate"=as.vector(c$LR1$statistic),"P-Value"=as.vector(c$LR1$p.value),row.names="LR Test",check.names=FALSE)
-    return(modellist)
-}
-
-impactstable<-function(model,wmatrix){
-    a<-impacts(model,listw = wmatrix)
-    impacts.df<-cbind.data.frame(a$direct,a$indirect,a$total)
-    row.names(impacts.df)<-attributes(a)$bnames
-    colnames(impacts.df)<-c("Direct","Indirect","Total")
-    
-    return(impacts.df)
-}
-
-
-lagmodeltable<-function(model){
-    
-    c<-summary(model)
-    
-    modellist<-list()
-    
-    modellist[[1]]<-c$Coef
-    modellist[[2]]<-data.frame("Estimate"=c(c$rho),"Std.Error"=c(c$rho.se),"z value"=c(c$rho/c$rho.se),"Pr(>|z|)"=c(2*(1-pnorm(c$rho/c$rho.se))),row.names=c("Rho"),check.names=FALSE)
-    modellist[[3]]<-data.frame("Observations"=length(c$residuals),"Parameters"=c$parameters,"AIC"=AIC(model),"Residual Variance"=c$s2,row.names=NULL,check.names=FALSE)  
-    modellist[[4]]<-data.frame("Estimate"=as.vector(c$Wald1$statistic),"P-Value"=as.vector(c$Wald1$p.value),row.names="Wald Test",check.names=FALSE)
-    return(modellist)
-}
-
-
-jbbptests<-function(model){
-    a<-jarque.bera.test(model$residuals)
-    b<-bptest(model)
-    modellist<-list()
-    modellist[[1]]<-data.frame("Statistic"=c(a$statistic,b$statistic),"DF"=c(a$parameter,b$parameter),"P-Value"=c(a$p.value,b$p.value),row.names=c("Jarque-Bera Test","Breusch-Pagan Test"),check.names=FALSE)
-    return(modellist)
-    }
-
-lagstslstable<-function(model){
-    
-    c<-summary(model)
-    
-    modellist<-list()
-    
-    modellist[[1]]<-c$Coef
-    modellist[[2]]<-data.frame("Observations"=length(c$residuals),"Parameters"=length(c$coefficients),"Residual Var."=c$sse/(length(c$residuals)-length(c$coefficients)),row.names=NULL,check.names=FALSE)  
-    return(modellist)
-}
-
-sarargstslstable<-function(model){
-    
-    c<-summary(model)
-    
-    modellist<-list()
-    
-    modellist[[1]]<-c$Coef
-    modellist[[2]]<-data.frame("Lambda Estimate"=c$lambda,"Observations"=length(c$residuals),"Parameters"=c$parameters,"Residual Variance"=c$s2,row.names=NULL,check.names=FALSE)  
-    return(modellist)
-}
-
-
-
-
-
 
 ```
 
@@ -155,18 +54,8 @@ pander(itadata[,3:4],big.mark=",")
 To check the spatial distribution we can plot a map of Italy with the values of unemployment rate
 
 ```{r echo=FALSE, fig.align="center",warning=FALSE}
-italiamap <- fortify(regiones, region = "REGIONE")
-map <- left_join(italiamap, itadata, by=c("id"="Territorio"))
-centroids<- itadata%>%
-    select(Territorio) %>%
-    cbind.data.frame(.,centroids)
-ggplot(map, aes(x = long, y = lat, group = group)) + geom_polygon(aes(fill = UNEM)) + 
-coord_equal(ratio=1) + 
-geom_text_repel(data=centroids,aes(label=Territorio,x=long,y=lat, group=Territorio))+
-theme(legend.position="right",panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(),axis.line=element_blank(),axis.text.x=element_blank(),
-      axis.text.y=element_blank(),axis.ticks=element_blank(),
-      axis.title.x=element_blank(),
-      axis.title.y=element_blank())+scale_fill_gradient("Unemployment Rate",low = "yellow2", high="firebrick3")
+
+mapunem
 ```
 
 
@@ -211,7 +100,7 @@ In the table below we can see our complete dataset is:
 
 
 ```{r echo=FALSE,results="asis"}
-pander(itadata[,3:10],big.mark=",",split.cells=c(3,1,1,1,1,1,1,1))
+pander(itadata[,2:9],big.mark=",",split.cells=c(3,1,1,1,1,1,1,1))
 ```
 
 ###2. **Model Estimation**
@@ -257,7 +146,7 @@ To test spatial correlation we must create first a W matrix. To do this we selec
 
 
 ```{r warning=FALSE}
-italia<-readShapePoly("./Shapefiles/Reg2016_ED50")
+italia<-readShapePoly("shapefiles/Reg2016_ED50")
 itacoords<-coordinates(italia)
 contnb_ita<-knearneigh(itacoords,4)
 knbita<-knn2nb(contnb_ita)
