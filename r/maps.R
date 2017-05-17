@@ -12,7 +12,7 @@ shapefile<-readOGR("shapefiles/Reg2016_ED50.shp",
                    verbose = T, stringsAsFactors = FALSE)
 centroids<-data.frame(long=coordinates(shapefile)[,1],
                       lat=coordinates(shapefile)[,2])
-data<-read.csv("data/itadata2004.csv")
+data<-read.csv("output/itadata2004.csv")
 
 
 #get information of coordinates of limits of regions from the shapefile
